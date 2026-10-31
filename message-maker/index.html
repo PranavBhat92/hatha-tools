@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Message Maker</title>
+<style>
+:root{--bg:#f7f1e8;--card:#fffaf3;--ink:#2b1a0e;--muted:#7a6553;--line:#e3d5c3;--accent:#8a4f1e;--accent-ink:#fff;--bubble:#dcf8c6;--bubble-ink:#111;--quote:#5f8f4e}
+@media (prefers-color-scheme:dark){:root{--bg:#1d140d;--card:#2a1d13;--ink:#f6ead9;--muted:#bba78f;--line:#4a3725;--accent:#e0a35a;--accent-ink:#1d140d;--bubble:#144d37;--bubble-ink:#e9edef;--quote:#8fd18a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:12px 16px 40px;display:grid;gap:16px}
+@media (min-width:900px){.wrap{grid-template-columns:400px minmax(0,1fr);align-items:start}.form{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}}
+h1.app{font-size:19px;margin:4px 0 0}
+.form{display:grid;gap:14px;align-content:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px}
+.card h2{font-size:15px;margin:0;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+label{display:grid;gap:4px;font-size:14px;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:72px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.row{grid-template-columns:1fr}}
+.pick{display:flex;gap:8px}
+.pick select{flex:1}
+.emojis{display:flex;flex-wrap:wrap;gap:6px}
+.emojis button{font-size:20px;padding:4px 8px;line-height:1.2;border-color:var(--line)}
+button,.btn{font:inherit;font-size:16px;border-radius:10px;border:1px solid var(--accent);background:transparent;color:var(--accent);padding:10px 14px;cursor:pointer;text-align:center;text-decoration:none}
+button.primary,.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.link{border:none;padding:4px 6px;font-size:14px;justify-self:start}
+details summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:15px}
+details[open] summary{margin-bottom:12px}
+.small{font-size:13px;color:var(--muted);margin:0}
+.tabs{display:flex;gap:6px}
+.tabs button{flex:1;padding:8px}
+.tabs button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.msgs{display:grid;gap:16px;align-content:start}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
+.msg h3{margin:0;font-size:16px}
+.bubble{background:var(--bubble);color:var(--bubble-ink);border-radius:10px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.45}
+.bubble .q{display:block;border-left:3px solid var(--quote);padding-left:8px}
+.bubble code{font-family:ui-monospace,Menlo,Consolas,monospace}
+.acts{display:flex;gap:10px}
+.acts>*{flex:1}
+[hidden]{display:none!important}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="form">
+    <h1 class="app">WhatsApp Message Maker</h1>
+
+    <div class="card">
+      <h2>Program</h2>
+      <div class="pick">
+        <select id="prog" aria-label="Program"></select>
+        <button id="addProg" type="button">+ New</button>
+      </div>
+      <div class="row">
+        <label>Name (English) <input id="p_name" type="text"></label>
+        <label>Name (Kannada) <input id="p_nameKn" type="text"></label>
+      </div>
+      <label>Emoji for this program <input id="p_emoji" type="text"></label>
+      <div class="emojis" id="emojis"></div>
+      <div class="row">
+        <label>Announcement headline <input id="p_headline" type="text"></label>
+        <label>Headline (Kannada) <input id="p_headlineKn" type="text"></label>
+      </div>
+      <div class="row">
+        <label>Called a <input id="p_kind" type="text" placeholder="program / workshop"></label>
+        <label>Fee (₹) <input id="p_fee" type="text" inputmode="numeric"></label>
+      </div>
+      <label>Fee also includes (optional) <input id="p_feeNote" type="text" placeholder="e.g. Bhuta Shuddhi kit …"></label>
+      <button id="rmProg" type="button" class="link">Delete this program</button>
+    </div>
+
+    <div class="card">
+      <h2>Dates &amp; time</h2>
+      <div class="row">
+        <label>First day <input id="d1" type="date"></label>
+        <label>Last day <input id="d2" type="date"></label>
+      </div>
+      <p class="small">Picking dates fills in the four lines below. You can still edit them.</p>
+      <div class="row">
+        <label>Dates (English) <input id="e_dates" type="text"></label>
+        <label>Dates (Kannada) <input id="e_datesKn" type="text"></label>
+      </div>
+      <div class="row">
+        <label>Start date (English) <input id="e_start" type="text"></label>
+        <label>Start date (Kannada) <input id="e_startKn" type="text"></label>
+      </div>
+      <label>Time <input id="e_time" type="text" placeholder="6:00 AM - 8:00 AM"></label>
+      <div class="row">
+        <label>Language
+          <select id="e_lang">
+            <option value="English|ಇಂಗ್ಲಿಷ್">English</option>
+            <option value="Kannada|ಕನ್ನಡ">Kannada</option>
+            <option value="Hindi|ಹಿಂದಿ">Hindi</option>
+            <option value="English & Kannada|ಇಂಗ್ಲಿಷ್ ಮತ್ತು ಕನ್ನಡ">English &amp; Kannada</option>
+          </select>
+        </label>
+        <label>Registration form link <input id="e_form" type="url" placeholder="https://forms.gle/…"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>Venue, payment &amp; contact</summary>
+        <div style="display:grid;gap:12px">
+          <div class="row">
+            <label>Venue <input id="s_venue" type="text"></label>
+            <label>Venue (Kannada) <input id="s_venueKn" type="text"></label>
+          </div>
+          <div class="row">
+            <label>Address <textarea id="s_address"></textarea></label>
+            <label>Address (Kannada) <textarea id="s_addressKn"></textarea></label>
+          </div>
+          <div class="row">
+            <label>City <input id="s_city" type="text"></label>
+            <label>City (Kannada) <input id="s_cityKn" type="text"></label>
+          </div>
+          <label>"In &lt;city&gt;" in Kannada <input id="s_inCityKn" type="text"></label>
+          <label>Google Maps link <input id="s_map" type="url"></label>
+          <label>UPI number for payment <input id="s_upi" type="tel"></label>
+          <div class="row">
+            <label>Contact name <input id="s_contact" type="text"></label>
+            <label>Contact name (Kannada) <input id="s_contactKn" type="text"></label>
+          </div>
+          <label>Contact phone <input id="s_phone" type="tel"></label>
+          <button id="resetSettings" type="button" class="link">Restore Praarambha details</button>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="msgs">
+    <div class="tabs" role="group" aria-label="Message language">
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="kn">ಕನ್ನಡ</button>
+      <button type="button" data-lang="all">Both</button>
+    </div>
+    <div id="msgs" class="msgs"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- templates ----------
+   Each template is a function of the values v (program fields, dates, settings).
+   WhatsApp formatting: *bold*  _italic_  ~strike~  ```mono```  "> " quote. */
+const TEMPLATES=[
+{id:'payment',lang:'en',title:'Application & payment',when:'After someone applies (not needed if you sent the announcement).',
+ text:v=>`_Namaskaram🙏_
+
+We have received your application for participating in the upcoming _*${v.name}*_ Program at ${v.city}.
+
+_Thank you for taking this step towards enriching your life with *Classical Hatha Yoga by Sadhguru Gurukulam*_🙏
+
+🗓️ *Date* : *${v.dates}*
+⏰ *Time* : *${v.time}*
+
+📍*Venue:*
+*${v.venue}*,
+${v.address}
+
+🌍 *Map Location:*
+${v.map}
+
+Please complete your registration for the program by making the payment of ₹${v.fee} towards the program participation fee using any UPI payment service to this number _*${v.upi}*_ and share with us a screenshot of the same.${v.feeNote?`
+(The program fees also includes ${v.feeNote})`:''}
+
+_After completing the payment, you will receive the Confirmation for your participation in the program_.
+
+_Look forward to having you with us!🪷_
+
+Pranam🙏`},
+
+{id:'announce',lang:'en',title:'Program announcement',when:'To invite people. Includes the registration form link.',
+ text:v=>`${v.emoji} *${v.headline}* ${v.emoji}
+
+Namaskaram,
+We warmly invite you to join the upcoming ${v.name} ${v.kind} happening in ${v.city}.
+
+🔊 Language: ${v.lang}
+🗓 Dates: ${v.dates}
+📍 Venue: ${v.venue}
+
+For registration and volunteering details, kindly fill out the form below:
+${v.form}
+
+
+Pranam 🙏😇`},
+
+{id:'announceKn',lang:'kn',title:'Program announcement (Kannada)',when:'To invite people. Includes the registration form link.',
+ text:v=>`${v.emoji} *${v.headlineKn}* ${v.emoji}
+
+ನಮಸ್ಕಾರ,
+${v.inCityKn} ನಡೆಯಲಿರುವ ${v.nameKn} ಕಾರ್ಯಕ್ರಮದಲ್ಲಿ ಭಾಗವಹಿಸಲು ನಾವು ನಿಮ್ಮನ್ನು ಹೃತ್ಪೂರ್ವಕವಾಗಿ ಆಹ್ವಾನಿಸುತ್ತೇವೆ.
+
+🔊 ಭಾಷೆ: ${v.langKn}
+🗓 ದಿನಾಂಕ: ${v.datesKn}
+📍 ಸ್ಥಳ: ${v.venueKn}
+
+ನೋಂದಣಿ ಮತ್ತು ಸ್ವಯಂಸೇವೆಯ ವಿವರಗಳಿಗಾಗಿ, ದಯವಿಟ್ಟು ಕೆಳಗಿನ ಫಾರ್ಮ್ ಅನ್ನು ಭರ್ತಿ ಮಾಡಿ:
+${v.form}
+
+
+ಪ್ರಣಾಮ 🙏`},
+
+{id:'ack',lang:'en',title:'Payment acknowledgement',when:'After the fee is received.',
+ text:v=>`_Namaskaram🙏_
+
+_With gratitude, acknowledging the receipt of the Program Participation-fee for your participation in the *${v.name} program happening from ${v.start}*._
+
+_Closer to the date, you will receive detailed guidelines on when to arrive, what to carry & how to participate in the program._
+
+_Looking forward to having you with us!😊_
+
+_Pranam_ 🙏🏼`},
+
+{id:'guide',lang:'en',title:'Guidelines for participants',when:'Send to all participants one day before the program.',
+ text:v=>`${v.emoji} _Namaskaram_ 🙏🏽
+
+_Welcome to the *${v.name}* program starting tomorrow, at ${v.venue}, ${v.city}._
+
+🗓️ *Date* : *${v.start}*
+⏰ *Time* : *${v.time}*
+
+*Please go through the following Guidelines carefully:*
+
+> _Please plan to arrive at least *10 minutes before the class start-time*. Please be *seated and relaxed* before the class starts. Due to the nature and sanctity of the program, *It may not be possible to allow late entrants.*_
+
+> _If this is your first time visiting the center, please kindly plan to start early allowing some extra time for yourself to find the new venue._
+
+> _Please come in *comfortable and loose-fitting clothes*. Cotton clothes are best suited for the practices. Shorts are *not* suitable for the class ambiance._
+
+> _It is best to come with your *own Yoga Mats*. However, it is not mandatory as the practice area is carpeted._
+
+> _Please come with an *Empty Stomach* to the class. You should not have eaten at least 4 hours before the class. Water is fine. Please do not have tea, coffee or any other beverage at least 2.5 hours before the class start-time. If you are very hungry, then lime water can be consumed._
+
+> _After arriving at the venue, kindly put your *mobile phones on silent or switched off mode* if carrying them with you._
+
+> *The venue is* :
+${v.venue},
+${v.address}
+
+> *🌎 Google Maps Location :*
+${v.map}
+
+_If you need any assistance finding the location, please call or WhatsApp us on this number: ${v.contact} – ${v.phone}._
+
+_We look forward to seeing you. 🙏_
+
+Pranam`},
+
+{id:'guideKn',lang:'kn',title:'Guidelines for participants (Kannada)',when:'Send to all participants one day before the program.',
+ text:v=>`*${v.nameKn} | ${v.cityKn}*
+
+${v.emoji} _ನಮಸ್ಕಾರ_ 🙏🏽
+
+_ನಾಳೆ ನಡೆಯಲಿರುವ *${v.nameKn}* ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ನಿಮಗೆ ಆದರದ ಸ್ವಾಗತ._
+
+🗓️ *ದಿನಾಂಕ* : *${v.startKn}*
+⏰ *ಸಮಯ* : *${v.time}*
+
+*ದಯವಿಟ್ಟು ಈ ಕೆಳಗಿನ ಮಾರ್ಗಸೂಚಿಗಳನ್ನು ಎಚ್ಚರಿಕೆಯಿಂದ ಓದಿ :*
+
+> _ಕಾರ್ಯಕ್ರಮದ ಸ್ವರೂಪ ಮತ್ತು ಪಾವಿತ್ರ್ಯದಿಂದಾಗಿ, *ತಡವಾಗಿ ಬರುವವರನ್ನು ಅನುಮತಿಸುವುದು ತುಂಬಾ ಕಷ್ಟಕರವಾಗಿರುತ್ತದೆ*. ದಯವಿಟ್ಟು ಪ್ರಾರಂಭದ ಸಮಯಕ್ಕೆ ಕನಿಷ್ಠ *10 ನಿಮಿಷಗಳ ಮೊದಲು* ಬರಲು ಯೋಜಿಸಿ. ತರಗತಿ ಪ್ರಾರಂಭವಾಗುವ ಹೊತ್ತಿಗೆ ನಿಮ್ಮ ಉಸಿರು ಸ್ಥಿರವಾಗಿರಬೇಕು._
+
+> _ಈ ಕೇಂದ್ರದಲ್ಲಿ ನೀವು ಮೊದಲ ಬಾರಿಗೆ ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಹಾಜರಾಗುತ್ತಿದ್ದರೆ, ದಯವಿಟ್ಟು ಹೊಸ ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ಸ್ವಲ್ಪ ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು ನೀಡಿ, ದಯವಿಟ್ಟು ಮೊದಲೇ ಪ್ರಾರಂಭಿಸಲು ಯೋಜಿಸಿ._
+
+> _ದಯವಿಟ್ಟು *ಆರಾಮದಾಯಕ ಮತ್ತು ಸಡಿಲವಾದ ಬಟ್ಟೆಗಳನ್ನು* ಧರಿಸಿ ಬನ್ನಿ. ಹತ್ತಿ ಬಟ್ಟೆಗಳು ಅಭ್ಯಾಸಕ್ಕೆ ಸೂಕ್ತವಾಗಿವೆ. ಚಡ್ಡಿಯನ್ನು ಧರಿಸುವುದು ತರಗತಿಯ ವಾತಾವರಣಕ್ಕೆ ಸೂಕ್ತವಲ್ಲ._
+
+> _ನಿಮ್ಮ ಸ್ವಂತ ಯೋಗ ಮ್ಯಾಟ್‌ಗಳೊಂದಿಗೆ ಬರುವುದು ಉತ್ತಮ. ಆದರೂ, ಅಭ್ಯಾಸ ಪ್ರದೇಶವು ಕಾರ್ಪೆಟ್‌ನಿಂದ ಆವೃತವಾಗಿರುವುದರಿಂದ ಇದು ಕಡ್ಡಾಯವಲ್ಲ._
+
+> _ಸ್ಥಳಕ್ಕೆ ಬಂದ ನಂತರ, ನಿಮ್ಮ *ಮೊಬೈಲ್ ಫೋನ್‌ಗಳನ್ನು ಸೈಲೆಂಟ್ ಅಥವಾ ಸ್ವಿಚ್ ಆಫ್ ಮೋಡ್‌ನಲ್ಲಿ ಇರಿಸಿ*._
+
+> *ಸ್ಥಳ* :
+${v.venueKn},
+${v.addressKn}
+
+> *🌎 ಗೂಗಲ್ ಮ್ಯಾಪ್ :*
+${v.map}
+
+_ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ನಿಮಗೆ ಯಾವುದೇ ಸಹಾಯ ಬೇಕಾದರೆ, ದಯವಿಟ್ಟು ಇದೇ ಸಂಖ್ಯೆಗೆ ನಮಗೆ ಕರೆ ಮಾಡಿ. ${v.contactKn} (*${v.phone}*)._
+
+ಪ್ರಣಾಮ 🙏`},
+
+{id:'closed',lang:'en',title:'Registrations closed',when:'When the program is full.',
+ text:v=>`Namaskaram,
+Registrations for this program are now closed as we've reached the maximum number of participants.
+However, we’ll be scheduling another program very soon.`},
+];
+
+/* ---------- defaults ---------- */
+const PROGRAMS=[
+  {name:'Angamardana',nameKn:'ಅಂಗಮರ್ದನ',emoji:'🌿',headline:'Learn Angamardana on a Weekend',headlineKn:'ಅಂಗಮರ್ದನ ಕಾರ್ಯಕ್ರಮ',kind:'workshop',fee:'',feeNote:''},
+  {name:'Surya Kriya & Surya Shakti',nameKn:'ಸೂರ್ಯ ಕ್ರಿಯಾ ಮತ್ತು ಸೂರ್ಯ ಶಕ್ತಿ',emoji:'🌞',headline:'Learn Surya Kriya & Surya Shakti',headlineKn:'ಸೂರ್ಯ ಕ್ರಿಯಾ ಮತ್ತು ಸೂರ್ಯ ಶಕ್ತಿ ಕಾರ್ಯಕ್ರಮ',kind:'program',fee:'3750',feeNote:'Bhuta Shuddhi kit which you will be using daily for your practice'},
+  {name:'Surya Kriya',nameKn:'ಸೂರ್ಯ ಕ್ರಿಯಾ',emoji:'🌞',headline:'Learn Surya Kriya',headlineKn:'ಸೂರ್ಯ ಕ್ರಿಯಾ ಕಾರ್ಯಕ್ರಮ',kind:'program',fee:'',feeNote:''},
+  {name:'Upa-Yoga',nameKn:'ಉಪ-ಯೋಗ',emoji:'🌸',headline:'Learn Upa-Yoga',headlineKn:'ಉಪ-ಯೋಗ ಕಾರ್ಯಕ್ರಮ',kind:'program',fee:'',feeNote:''},
+  {name:'Yogasanas',nameKn:'ಯೋಗಾಸನಗಳು',emoji:'🧘',headline:'Learn Yogasanas',headlineKn:'ಯೋಗಾಸನಗಳು ಕಾರ್ಯಕ್ರಮ',kind:'program',fee:'',feeNote:''},
+];
+const SETTINGS={venue:'Praarambha - Hatha Yoga Center',venueKn:'ಪ್ರಾರಂಭ - ಹಠ ಯೋಗ ಕೇಂದ್ರ',
+  address:'#929, BEML 2nd Stage,\nRajarajeshwari Nagar,\nMysuru',addressKn:'#929, ಬೆಮಲ್ 2ನೇ ಹಂತ,\nರಾಜರಾಜೇಶ್ವರಿ ನಗರ,\nಮೈಸೂರು',
+  city:'Mysuru',cityKn:'ಮೈಸೂರು',inCityKn:'ಮೈಸೂರಿನಲ್ಲಿ',map:'https://maps.app.goo.gl/TTNiMedmwFFhD8Eu6',
+  upi:'9535797618',contact:'Pranav',contactKn:'ಪ್ರಣವ್',phone:'9535797618'};
+const EVENT={d1:'',d2:'',dates:'',datesKn:'',start:'',startKn:'',time:'6:00 AM - 8:00 AM',lang:'English|ಇಂಗ್ಲಿಷ್',form:''};
+const EMOJIS=['🌿','🌞','🌸','🪷','🧘','🔥','🌺','✨','🕉️','🙏','🌼','🌙'];
+const PFIELDS=['name','nameKn','emoji','headline','headlineKn','kind','fee','feeNote'];
+
+const $=id=>document.getElementById(id);
+const S={progs:structuredClone(PROGRAMS),cur:0,ev:{...EVENT},set:{...SETTINGS},view:'en'};
+
+function load(){try{const s=JSON.parse(localStorage.getItem('message-maker')||'{}');
+  if(Array.isArray(s.progs)&&s.progs.length)S.progs=s.progs;
+  if(Number.isInteger(s.cur)&&s.cur<S.progs.length)S.cur=s.cur;
+  if(s.ev)Object.assign(S.ev,s.ev);if(s.set)Object.assign(S.set,s.set);
+  if(['en','kn','all'].includes(s.view))S.view=s.view;}catch(e){}}
+function save(){try{localStorage.setItem('message-maker',JSON.stringify(S))}catch(e){}}
+
+/* ---------- dates ---------- */
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON_KN=['ಜನವರಿ','ಫೆಬ್ರವರಿ','ಮಾರ್ಚ್','ಏಪ್ರಿಲ್','ಮೇ','ಜೂನ್','ಜುಲೈ','ಆಗಸ್ಟ್','ಸೆಪ್ಟೆಂಬರ್','ಅಕ್ಟೋಬರ್','ನವೆಂಬರ್','ಡಿಸೆಂಬರ್'];
+const ord=n=>n+((n%100>=11&&n%100<=13)?'th':(['th','st','nd','rd'][n%10]||'th'));
+const parse=s=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(s||'');return m?{y:+m[1],m:+m[2]-1,d:+m[3]}:null};
+function fillDates(){
+  const a=parse(S.ev.d1);if(!a)return;let b=parse(S.ev.d2)||a;
+  if(b.y*1e4+b.m*100+b.d<a.y*1e4+a.m*100+a.d)b=a;
+  const same=a.y===b.y&&a.m===b.m&&a.d===b.d,sameM=a.y===b.y&&a.m===b.m;
+  const next=new Date(a.y,a.m,a.d+1),two=next.getFullYear()===b.y&&next.getMonth()===b.m&&next.getDate()===b.d;
+  const en=x=>`${ord(x.d)} ${MON[x.m]}`,kn=x=>`${MON_KN[x.m]} ${x.d}`;
+  S.ev.dates=same?en(a):sameM?`${ord(a.d)}${two?' & ':' - '}${en(b)}`:`${en(a)}${two?' & ':' - '}${en(b)}`;
+  S.ev.datesKn=same?kn(a):two?`${kn(a)} ಮತ್ತು ${kn(b)}`:`${kn(a)} ರಿಂದ ${kn(b)} ರವರೆಗೆ`;
+  S.ev.start=`${en(a)} ${a.y}`;
+  S.ev.startKn=`${a.d}ನೇ ${MON_KN[a.m]} ${a.y}`;
+}
+
+/* ---------- WhatsApp-style preview ---------- */
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function wa(text){
+  const W='\\p{L}\\p{N}\\p{M}',L=`(^|[^${W}])`,R=`(?![${W}])`;
+  const fmt=(s,ch,tag)=>{const c=ch==='*'?'\\*':ch;
+    return s.replace(new RegExp(L+c+'(?!\\s)([^\\n'+c+']+?)(?<!\\s)'+c+R,'gmu'),`$1<${tag}>$2</${tag}>`)};
+  return text.split('\n').map(line=>{
+    const q=/^> /.test(line);let s=esc(q?line.slice(2):line);
+    s=s.replace(/```([^`]+)```/g,'<code>$1</code>');
+    s=fmt(s,'*','b');s=fmt(s,'_','i');s=fmt(s,'~','s');
+    return q?`<span class="q">${s}</span>`:s;
+  }).join('\n').replace(/<\/span>\n/g,'</span>');
+}
+
+/* ---------- render ---------- */
+function values(){
+  const p=S.progs[S.cur],[lang,langKn]=S.ev.lang.split('|'),x=s=>s&&s.trim()?s.trim():null;
+  const blank=k=>`[${k}]`;
+  return {...Object.fromEntries(PFIELDS.map(k=>[k,x(p[k])??(k==='feeNote'?'':blank(k))])),
+    kind:x(p.kind)??'program',
+    dates:x(S.ev.dates)??blank('dates'),datesKn:x(S.ev.datesKn)??blank('Kannada dates'),
+    start:x(S.ev.start)??blank('start date'),startKn:x(S.ev.startKn)??blank('Kannada start date'),
+    time:x(S.ev.time)??blank('time'),form:x(S.ev.form)??blank('form link'),lang,langKn,
+    ...Object.fromEntries(Object.keys(SETTINGS).map(k=>[k,x(S.set[k])??blank(k)]))};
+}
+function render(){
+  const v=values(),box=$('msgs');box.innerHTML='';
+  for(const t of TEMPLATES){
+    if(S.view!=='all'&&t.lang!==S.view)continue;
+    const text=t.text(v).split('\n').map(l=>l.trimEnd()).join('\n');
+    const d=document.createElement('div');d.className='msg';
+    d.innerHTML=`<h3></h3><p class="small"></p><div class="bubble"></div>
+      <div class="acts"><button type="button" class="primary">Copy</button><a class="btn" target="_blank" rel="noopener">WhatsApp</a></div>`;
+    d.querySelector('h3').textContent=t.title;d.querySelector('.small').textContent=t.when;
+    d.querySelector('.bubble').innerHTML=wa(text);
+    d.querySelector('a').href='https://wa.me/?text='+encodeURIComponent(text);
+    const b=d.querySelector('button');b.onclick=()=>copy(text,b);
+    box.appendChild(d);
+  }
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===S.view));
+}
+async function copy(text,btn){
+  let ok=false;
+  try{await navigator.clipboard.writeText(text);ok=true}catch(e){
+    const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(e2){}ta.remove();}
+  btn.textContent=ok?'Copied ✓':'Copy failed';setTimeout(()=>btn.textContent='Copy',1500);
+}
+
+/* ---------- form ---------- */
+function fillProg(){
+  const sel=$('prog');sel.innerHTML='';
+  S.progs.forEach((p,i)=>sel.add(new Option(p.name||`Program ${i+1}`,i)));
+  sel.value=S.cur;
+  const p=S.progs[S.cur];for(const k of PFIELDS)$('p_'+k).value=p[k]||'';
+  $('rmProg').hidden=S.progs.length<2;
+}
+function fillEvent(){
+  $('d1').value=S.ev.d1;$('d2').value=S.ev.d2;
+  for(const k of['dates','datesKn','start','startKn','time','form'])$('e_'+k).value=S.ev[k];
+  $('e_lang').value=S.ev.lang;
+}
+function fillSettings(){for(const k of Object.keys(SETTINGS))$('s_'+k).value=S.set[k]}
+function update(){save();render()}
+
+function init(){
+  load();
+  for(const k of PFIELDS)$('p_'+k).addEventListener('input',e=>{
+    S.progs[S.cur][k]=e.target.value;
+    if(k==='name')$('prog').options[S.cur].text=e.target.value||`Program ${S.cur+1}`;
+    update();});
+  $('prog').onchange=e=>{S.cur=+e.target.value;fillProg();update()};
+  $('addProg').onclick=()=>{
+    const name=prompt('New program name (English):');if(!name)return;
+    S.progs.push({name,nameKn:'',emoji:'🙏',headline:`Learn ${name}`,headlineKn:'',kind:'program',fee:'',feeNote:''});
+    S.cur=S.progs.length-1;fillProg();update();$('p_nameKn').focus();};
+  $('rmProg').onclick=()=>{
+    if(S.progs.length<2||!confirm(`Delete "${S.progs[S.cur].name}"?`))return;
+    S.progs.splice(S.cur,1);S.cur=0;fillProg();update();};
+  const em=$('emojis');
+  for(const e of EMOJIS){const b=document.createElement('button');b.type='button';b.textContent=e;
+    b.onclick=()=>{S.progs[S.cur].emoji=e;$('p_emoji').value=e;update()};em.appendChild(b);}
+  for(const k of['d1','d2'])$(k).addEventListener('input',e=>{
+    S.ev[k]=e.target.value;if(k==='d1'&&(!S.ev.d2||S.ev.d2<S.ev.d1)){S.ev.d2=S.ev.d1;$('d2').value=S.ev.d1}
+    fillDates();fillEvent();update();});
+  for(const k of['dates','datesKn','start','startKn','time','form','lang'])
+    $('e_'+k).addEventListener('input',e=>{S.ev[k]=e.target.value;update()});
+  for(const k of Object.keys(SETTINGS))$('s_'+k).addEventListener('input',e=>{S.set[k]=e.target.value;update()});
+  $('resetSettings').onclick=()=>{S.set={...SETTINGS};fillSettings();update()};
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.view=b.dataset.lang;update()});
+  fillProg();fillEvent();fillSettings();render();
+}
+init();
+</script>
+</body></html>
