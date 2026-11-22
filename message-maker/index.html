@@ -227,32 +227,6 @@ _ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ನಿಮಗೆ ಯಾವು�
 
 ಪ್ರಣಾಮ 🙏`;
 const TEMPLATES=[
-{id:'payment',lang:'en',title:'Application & payment',when:'After someone applies (not needed if you sent the announcement).',
- text:v=>`_Namaskaram🙏_
-
-We have received your application for participating in the upcoming _*${v.name}*_ Program at ${v.city}.
-
-_Thank you for taking this step towards enriching your life with *Classical Hatha Yoga by Sadhguru Gurukulam*_🙏
-
-🗓️ *Date* : *${v.dates}*
-⏰ *Time* : *${v.time}*
-
-📍*Venue:*
-*${v.venue}*,
-${v.address}
-
-🌍 *Map Location:*
-${v.map}
-
-Please complete your registration for the program by making the payment of ₹${v.fee} towards the program participation fee using any UPI payment service to this number _*${v.upi}*_ and share with us a screenshot of the same.${v.feeNote?`
-(The program fees also includes ${v.feeNote})`:''}
-
-_After completing the payment, you will receive the Confirmation for your participation in the program_.
-
-_Look forward to having you with us!🪷_
-
-Pranam🙏`},
-
 {id:'announce',lang:'en',title:'Program announcement',when:'To invite people. Includes the registration form link.',
  text:v=>`${v.emoji} *${v.headline}* ${v.emoji}
 
@@ -285,6 +259,20 @@ ${v.form}
 
 ಪ್ರಣಾಮ 🙏`},
 
+{id:'reminder',lang:'en',title:'Reminder with guidelines',when:'Send to all participants one day before the program. Pick an image to go with it.',
+ text:v=>WELCOME(v)+'\n\n'+GUIDE(v)},
+
+{id:'reminderKn',lang:'kn',title:'Reminder with guidelines (Kannada)',when:'Send to all participants one day before the program. Pick an image to go with it.',
+ text:v=>WELCOME_KN(v)+'\n\n'+GUIDE_KN(v)},
+
+{id:'welcome',lang:'en',title:'Reminder only',when:'The short reminder (welcome, date and time) on its own, e.g. as an image caption.',text:WELCOME},
+
+{id:'welcomeKn',lang:'kn',title:'Reminder only (Kannada)',when:'The short reminder (welcome, date and time) on its own, e.g. as an image caption.',text:WELCOME_KN},
+
+{id:'guide',lang:'en',title:'Guidelines only',when:'Just the guidelines, without the reminder.',text:GUIDE},
+
+{id:'guideKn',lang:'kn',title:'Guidelines only (Kannada)',when:'Just the guidelines, without the reminder.',text:GUIDE_KN},
+
 {id:'ack',lang:'en',title:'Payment acknowledgement',when:'After the fee is received.',
  text:v=>`_Namaskaram🙏_
 
@@ -296,24 +284,36 @@ _Looking forward to having you with us!😊_
 
 _Pranam_ 🙏🏼`},
 
-{id:'reminder',lang:'en',title:'Reminder (welcome + guidelines)',when:'Send to all participants one day before the program. Pick an image to go with it.',
- text:v=>WELCOME(v)+'\n\n'+GUIDE(v)},
-
-{id:'reminderKn',lang:'kn',title:'Reminder (welcome + guidelines, Kannada)',when:'Send to all participants one day before the program. Pick an image to go with it.',
- text:v=>WELCOME_KN(v)+'\n\n'+GUIDE_KN(v)},
-
-{id:'welcome',lang:'en',title:'Welcome only',when:'The short welcome on its own, e.g. as an image caption.',text:WELCOME},
-
-{id:'welcomeKn',lang:'kn',title:'Welcome only (Kannada)',when:'The short welcome on its own, e.g. as an image caption.',text:WELCOME_KN},
-
-{id:'guide',lang:'en',title:'Guidelines only',when:'Just the guidelines, without the welcome.',text:GUIDE},
-
-{id:'guideKn',lang:'kn',title:'Guidelines only (Kannada)',when:'Just the guidelines, without the welcome.',text:GUIDE_KN},
-
 {id:'closed',lang:'en',title:'Registrations closed',when:'When the program is full.',
  text:v=>`Namaskaram,
 Registrations for this program are now closed as we've reached the maximum number of participants.
 However, we’ll be scheduling another program very soon.`},
+
+{id:'payment',lang:'en',title:'Application & payment',when:'After someone applies (not needed if you sent the announcement).',
+ text:v=>`_Namaskaram🙏_
+
+We have received your application for participating in the upcoming _*${v.name}*_ Program at ${v.city}.
+
+_Thank you for taking this step towards enriching your life with *Classical Hatha Yoga by Sadhguru Gurukulam*_🙏
+
+🗓️ *Date* : *${v.dates}*
+⏰ *Time* : *${v.time}*
+
+📍*Venue:*
+*${v.venue}*,
+${v.address}
+
+🌍 *Map Location:*
+${v.map}
+
+Please complete your registration for the program by making the payment of ₹${v.fee} towards the program participation fee using any UPI payment service to this number _*${v.upi}*_ and share with us a screenshot of the same.${v.feeNote?`
+(The program fees also includes ${v.feeNote})`:''}
+
+_After completing the payment, you will receive the Confirmation for your participation in the program_.
+
+_Look forward to having you with us!🪷_
+
+Pranam🙏`},
 ];
 
 /* ---------- defaults ---------- */
@@ -359,21 +359,10 @@ async function loadImages(){
   for(const k of Object.keys(S.pick))if(!IMGS.some(i=>i.id===S.pick[k]))delete S.pick[k];
   fillImages();render();
 }
-/* Large photos are shrunk to 1600px (JPEG) so they share quickly; small ones are kept as they are. */
-async function shrink(f){
-  if(f.size<700e3)return f;
-  try{const bmp=await createImageBitmap(f),k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
-    if(k===1&&f.size<2e6)return f;
-    const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
-    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
-    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
-    return b?new File([b],f.name.replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'}):f;
-  }catch(e){return f}
-}
 async function addImages(files){
   let failed=0;
   for(const f0 of files){if(!f0.type.startsWith('image/'))continue;
-    const f=await shrink(f0),id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const f=f0,id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     try{await tx('readwrite',st=>st.put({id,name:f.name,blob:f,added:Date.now()}))}catch(e){failed++}
     IMGS.push({id,file:f,url:URL.createObjectURL(f)});}
   if(failed)alert('Could not save the image(s) in this browser. They will be gone when the page is closed.');
