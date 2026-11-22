@@ -42,6 +42,16 @@ details[open] summary{margin-bottom:12px}
 .acts{display:flex;gap:10px}
 .acts>*{flex:1}
 [hidden]{display:none!important}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumb{position:relative;width:76px;height:76px;border-radius:8px;overflow:hidden;border:2px solid var(--line);background:var(--bg);padding:0;flex:none}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .x{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:24px;padding:0}
+.imgpick{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.imgpick .thumb{width:60px;height:60px;cursor:pointer}
+.imgpick .thumb.none{font-size:12px;color:var(--muted);display:grid;place-items:center;text-align:center}
+.imgpick .thumb[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.bubble img{display:block;max-width:100%;max-height:320px;border-radius:6px;margin-bottom:8px}
+.acts{flex-wrap:wrap}
 </style>
 </head><body>
 <div class="wrap">
@@ -102,6 +112,13 @@ details[open] summary{margin-bottom:12px}
     </div>
 
     <div class="card">
+      <h2>Images</h2>
+      <p class="small">Saved only on this phone/browser. Pick one under any message to send it with the text.</p>
+      <div class="thumbs" id="imgList"></div>
+      <label class="btn" style="display:block">+ Add images<input id="imgAdd" type="file" accept="image/*" multiple hidden></label>
+    </div>
+
+    <div class="card">
       <details>
         <summary>Venue, payment &amp; contact</summary>
         <div style="display:grid;gap:12px">
@@ -145,6 +162,70 @@ details[open] summary{margin-bottom:12px}
 /* ---------- templates ----------
    Each template is a function of the values v (program fields, dates, settings).
    WhatsApp formatting: *bold*  _italic_  ~strike~  ```mono```  "> " quote. */
+/* The reminder = welcome + guidelines, so edit each part once here. */
+const noYear=s=>s.replace(/\s+\d{4}$/,'');
+const WELCOME=v=>`${v.emoji} _Namaskaram_ 🙏🏽
+
+_Welcome to the *${v.name}* program starting tomorrow, at ${v.venue}, ${v.city}._
+
+🗓️ *Date* : *${noYear(v.start)}*
+⏰ *Time* : *${v.time}*`;
+const GUIDE=v=>`*Please go through the following Guidelines carefully:*
+
+> _Please plan to arrive at least *5 minutes before the class start-time*. Please be *seated and relaxed* before the class starts. Due to the nature and sanctity of the program, *It may not be possible to allow late entrants.*_
+
+> _If this is your first time visiting the center, please kindly plan to start early allowing some extra time for yourself to find the new venue._
+
+> _Please come in *comfortable and loose-fitting clothes*. Cotton clothes are best suited for the practices. Shorts are *not* suitable for the class ambiance._
+
+> _It is best to come with your *own Yoga Mats*. However, it is not mandatory as the practice area is carpeted._
+
+> _Please come with an *Empty Stomach* to the class. You should not have eaten at least 4 hours before the class. Water is fine. Please do not have tea, coffee or any other beverage at least 2.5 hours before the class start-time. If you are very hungry, then lime water can be consumed._
+
+> _After arriving at the venue, kindly put your *mobile phones on silent or switched off mode* if carrying them with you._
+
+> *The venue is* :
+${v.venue},
+${v.address}
+
+> *🌎 Google Maps Location :*
+${v.map}
+
+_If you need any assistance finding the location, please call or WhatsApp us on this number: ${v.contact} – ${v.phone}._
+
+_We look forward to seeing you. 🙏_
+
+Pranam`;
+const WELCOME_KN=v=>`*${v.nameKn} | ${v.cityKn}*
+
+${v.emoji} _ನಮಸ್ಕಾರ_ 🙏🏽
+
+_ನಾಳೆ ನಡೆಯಲಿರುವ *${v.nameKn}* ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ನಿಮಗೆ ಆದರದ ಸ್ವಾಗತ._
+
+🗓️ *ದಿನಾಂಕ* : *${noYear(v.startKn)}*
+⏰ *ಸಮಯ* : *${v.time}*`;
+const GUIDE_KN=v=>`*ದಯವಿಟ್ಟು ಈ ಕೆಳಗಿನ ಮಾರ್ಗಸೂಚಿಗಳನ್ನು ಎಚ್ಚರಿಕೆಯಿಂದ ಓದಿ :*
+
+> _ಕಾರ್ಯಕ್ರಮದ ಸ್ವರೂಪ ಮತ್ತು ಪಾವಿತ್ರ್ಯದಿಂದಾಗಿ, *ತಡವಾಗಿ ಬರುವವರನ್ನು ಅನುಮತಿಸುವುದು ತುಂಬಾ ಕಷ್ಟಕರವಾಗಿರುತ್ತದೆ*. ದಯವಿಟ್ಟು ಪ್ರಾರಂಭದ ಸಮಯಕ್ಕೆ ಕನಿಷ್ಠ *5 ನಿಮಿಷಗಳ ಮೊದಲು* ಬರಲು ಯೋಜಿಸಿ. ತರಗತಿ ಪ್ರಾರಂಭವಾಗುವ ಹೊತ್ತಿಗೆ ನಿಮ್ಮ ಉಸಿರು ಸ್ಥಿರವಾಗಿರಬೇಕು._
+
+> _ಈ ಕೇಂದ್ರದಲ್ಲಿ ನೀವು ಮೊದಲ ಬಾರಿಗೆ ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಹಾಜರಾಗುತ್ತಿದ್ದರೆ, ದಯವಿಟ್ಟು ಹೊಸ ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ಸ್ವಲ್ಪ ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು ನೀಡಿ, ದಯವಿಟ್ಟು ಮೊದಲೇ ಪ್ರಾರಂಭಿಸಲು ಯೋಜಿಸಿ._
+
+> _ದಯವಿಟ್ಟು *ಆರಾಮದಾಯಕ ಮತ್ತು ಸಡಿಲವಾದ ಬಟ್ಟೆಗಳನ್ನು* ಧರಿಸಿ ಬನ್ನಿ. ಹತ್ತಿ ಬಟ್ಟೆಗಳು ಅಭ್ಯಾಸಕ್ಕೆ ಸೂಕ್ತವಾಗಿವೆ. ಚಡ್ಡಿಯನ್ನು ಧರಿಸುವುದು ತರಗತಿಯ ವಾತಾವರಣಕ್ಕೆ ಸೂಕ್ತವಲ್ಲ._
+
+> _ನಿಮ್ಮ ಸ್ವಂತ ಯೋಗ ಮ್ಯಾಟ್‌ಗಳೊಂದಿಗೆ ಬರುವುದು ಉತ್ತಮ. ಆದರೂ, ಅಭ್ಯಾಸ ಪ್ರದೇಶವು ಕಾರ್ಪೆಟ್‌ನಿಂದ ಆವೃತವಾಗಿರುವುದರಿಂದ ಇದು ಕಡ್ಡಾಯವಲ್ಲ._
+
+> _ಸ್ಥಳಕ್ಕೆ ಬಂದ ನಂತರ, ನಿಮ್ಮ *ಮೊಬೈಲ್ ಫೋನ್‌ಗಳನ್ನು ಸೈಲೆಂಟ್ ಅಥವಾ ಸ್ವಿಚ್ ಆಫ್ ಮೋಡ್‌ನಲ್ಲಿ ಇರಿಸಿ*._
+
+> *ಸ್ಥಳ* :
+${v.venueKn},
+${v.addressKn}
+
+> *🌎 ಗೂಗಲ್ ಮ್ಯಾಪ್ :*
+${v.map}
+
+_ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ನಿಮಗೆ ಯಾವುದೇ ಸಹಾಯ ಬೇಕಾದರೆ, ದಯವಿಟ್ಟು ಇದೇ ಸಂಖ್ಯೆಗೆ ನಮಗೆ ಕರೆ ಮಾಡಿ. ${v.contactKn} (*${v.phone}*)._
+
+ಪ್ರಣಾಮ 🙏`;
 const TEMPLATES=[
 {id:'payment',lang:'en',title:'Application & payment',when:'After someone applies (not needed if you sent the announcement).',
  text:v=>`_Namaskaram🙏_
@@ -215,73 +296,19 @@ _Looking forward to having you with us!😊_
 
 _Pranam_ 🙏🏼`},
 
-{id:'guide',lang:'en',title:'Guidelines for participants',when:'Send to all participants one day before the program.',
- text:v=>`${v.emoji} _Namaskaram_ 🙏🏽
+{id:'reminder',lang:'en',title:'Reminder (welcome + guidelines)',when:'Send to all participants one day before the program. Pick an image to go with it.',
+ text:v=>WELCOME(v)+'\n\n'+GUIDE(v)},
 
-_Welcome to the *${v.name}* program starting tomorrow, at ${v.venue}, ${v.city}._
+{id:'reminderKn',lang:'kn',title:'Reminder (welcome + guidelines, Kannada)',when:'Send to all participants one day before the program. Pick an image to go with it.',
+ text:v=>WELCOME_KN(v)+'\n\n'+GUIDE_KN(v)},
 
-🗓️ *Date* : *${v.start}*
-⏰ *Time* : *${v.time}*
+{id:'welcome',lang:'en',title:'Welcome only',when:'The short welcome on its own, e.g. as an image caption.',text:WELCOME},
 
-*Please go through the following Guidelines carefully:*
+{id:'welcomeKn',lang:'kn',title:'Welcome only (Kannada)',when:'The short welcome on its own, e.g. as an image caption.',text:WELCOME_KN},
 
-> _Please plan to arrive at least *10 minutes before the class start-time*. Please be *seated and relaxed* before the class starts. Due to the nature and sanctity of the program, *It may not be possible to allow late entrants.*_
+{id:'guide',lang:'en',title:'Guidelines only',when:'Just the guidelines, without the welcome.',text:GUIDE},
 
-> _If this is your first time visiting the center, please kindly plan to start early allowing some extra time for yourself to find the new venue._
-
-> _Please come in *comfortable and loose-fitting clothes*. Cotton clothes are best suited for the practices. Shorts are *not* suitable for the class ambiance._
-
-> _It is best to come with your *own Yoga Mats*. However, it is not mandatory as the practice area is carpeted._
-
-> _Please come with an *Empty Stomach* to the class. You should not have eaten at least 4 hours before the class. Water is fine. Please do not have tea, coffee or any other beverage at least 2.5 hours before the class start-time. If you are very hungry, then lime water can be consumed._
-
-> _After arriving at the venue, kindly put your *mobile phones on silent or switched off mode* if carrying them with you._
-
-> *The venue is* :
-${v.venue},
-${v.address}
-
-> *🌎 Google Maps Location :*
-${v.map}
-
-_If you need any assistance finding the location, please call or WhatsApp us on this number: ${v.contact} – ${v.phone}._
-
-_We look forward to seeing you. 🙏_
-
-Pranam`},
-
-{id:'guideKn',lang:'kn',title:'Guidelines for participants (Kannada)',when:'Send to all participants one day before the program.',
- text:v=>`*${v.nameKn} | ${v.cityKn}*
-
-${v.emoji} _ನಮಸ್ಕಾರ_ 🙏🏽
-
-_ನಾಳೆ ನಡೆಯಲಿರುವ *${v.nameKn}* ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ನಿಮಗೆ ಆದರದ ಸ್ವಾಗತ._
-
-🗓️ *ದಿನಾಂಕ* : *${v.startKn}*
-⏰ *ಸಮಯ* : *${v.time}*
-
-*ದಯವಿಟ್ಟು ಈ ಕೆಳಗಿನ ಮಾರ್ಗಸೂಚಿಗಳನ್ನು ಎಚ್ಚರಿಕೆಯಿಂದ ಓದಿ :*
-
-> _ಕಾರ್ಯಕ್ರಮದ ಸ್ವರೂಪ ಮತ್ತು ಪಾವಿತ್ರ್ಯದಿಂದಾಗಿ, *ತಡವಾಗಿ ಬರುವವರನ್ನು ಅನುಮತಿಸುವುದು ತುಂಬಾ ಕಷ್ಟಕರವಾಗಿರುತ್ತದೆ*. ದಯವಿಟ್ಟು ಪ್ರಾರಂಭದ ಸಮಯಕ್ಕೆ ಕನಿಷ್ಠ *10 ನಿಮಿಷಗಳ ಮೊದಲು* ಬರಲು ಯೋಜಿಸಿ. ತರಗತಿ ಪ್ರಾರಂಭವಾಗುವ ಹೊತ್ತಿಗೆ ನಿಮ್ಮ ಉಸಿರು ಸ್ಥಿರವಾಗಿರಬೇಕು._
-
-> _ಈ ಕೇಂದ್ರದಲ್ಲಿ ನೀವು ಮೊದಲ ಬಾರಿಗೆ ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಹಾಜರಾಗುತ್ತಿದ್ದರೆ, ದಯವಿಟ್ಟು ಹೊಸ ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ಸ್ವಲ್ಪ ಹೆಚ್ಚುವರಿ ಸಮಯವನ್ನು ನೀಡಿ, ದಯವಿಟ್ಟು ಮೊದಲೇ ಪ್ರಾರಂಭಿಸಲು ಯೋಜಿಸಿ._
-
-> _ದಯವಿಟ್ಟು *ಆರಾಮದಾಯಕ ಮತ್ತು ಸಡಿಲವಾದ ಬಟ್ಟೆಗಳನ್ನು* ಧರಿಸಿ ಬನ್ನಿ. ಹತ್ತಿ ಬಟ್ಟೆಗಳು ಅಭ್ಯಾಸಕ್ಕೆ ಸೂಕ್ತವಾಗಿವೆ. ಚಡ್ಡಿಯನ್ನು ಧರಿಸುವುದು ತರಗತಿಯ ವಾತಾವರಣಕ್ಕೆ ಸೂಕ್ತವಲ್ಲ._
-
-> _ನಿಮ್ಮ ಸ್ವಂತ ಯೋಗ ಮ್ಯಾಟ್‌ಗಳೊಂದಿಗೆ ಬರುವುದು ಉತ್ತಮ. ಆದರೂ, ಅಭ್ಯಾಸ ಪ್ರದೇಶವು ಕಾರ್ಪೆಟ್‌ನಿಂದ ಆವೃತವಾಗಿರುವುದರಿಂದ ಇದು ಕಡ್ಡಾಯವಲ್ಲ._
-
-> _ಸ್ಥಳಕ್ಕೆ ಬಂದ ನಂತರ, ನಿಮ್ಮ *ಮೊಬೈಲ್ ಫೋನ್‌ಗಳನ್ನು ಸೈಲೆಂಟ್ ಅಥವಾ ಸ್ವಿಚ್ ಆಫ್ ಮೋಡ್‌ನಲ್ಲಿ ಇರಿಸಿ*._
-
-> *ಸ್ಥಳ* :
-${v.venueKn},
-${v.addressKn}
-
-> *🌎 ಗೂಗಲ್ ಮ್ಯಾಪ್ :*
-${v.map}
-
-_ಸ್ಥಳವನ್ನು ಹುಡುಕಲು ನಿಮಗೆ ಯಾವುದೇ ಸಹಾಯ ಬೇಕಾದರೆ, ದಯವಿಟ್ಟು ಇದೇ ಸಂಖ್ಯೆಗೆ ನಮಗೆ ಕರೆ ಮಾಡಿ. ${v.contactKn} (*${v.phone}*)._
-
-ಪ್ರಣಾಮ 🙏`},
+{id:'guideKn',lang:'kn',title:'Guidelines only (Kannada)',when:'Just the guidelines, without the welcome.',text:GUIDE_KN},
 
 {id:'closed',lang:'en',title:'Registrations closed',when:'When the program is full.',
  text:v=>`Namaskaram,
@@ -306,14 +333,65 @@ const EMOJIS=['🌿','🌞','🌸','🪷','🧘','🔥','🌺','✨','🕉️','
 const PFIELDS=['name','nameKn','emoji','headline','headlineKn','kind','fee','feeNote'];
 
 const $=id=>document.getElementById(id);
-const S={progs:structuredClone(PROGRAMS),cur:0,ev:{...EVENT},set:{...SETTINGS},view:'en'};
+const S={progs:structuredClone(PROGRAMS),cur:0,ev:{...EVENT},set:{...SETTINGS},view:'en',pick:{}};
 
 function load(){try{const s=JSON.parse(localStorage.getItem('message-maker')||'{}');
   if(Array.isArray(s.progs)&&s.progs.length)S.progs=s.progs;
   if(Number.isInteger(s.cur)&&s.cur<S.progs.length)S.cur=s.cur;
   if(s.ev)Object.assign(S.ev,s.ev);if(s.set)Object.assign(S.set,s.set);
-  if(['en','kn','all'].includes(s.view))S.view=s.view;}catch(e){}}
+  if(['en','kn','all'].includes(s.view))S.view=s.view;
+  if(s.pick&&typeof s.pick==='object')S.pick=s.pick;}catch(e){}}
 function save(){try{localStorage.setItem('message-maker',JSON.stringify(S))}catch(e){}}
+
+/* ---------- images (IndexedDB, stays in this browser) ---------- */
+let IMGS=[];/* {id,file,url} in the order added */
+const idb=new Promise((res,rej)=>{try{const r=indexedDB.open('message-maker',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('images',{keyPath:'id'});
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});
+const tx=async(mode,fn)=>{const db=await idb;return new Promise((res,rej)=>{
+  const t=db.transaction('images',mode),out=fn(t.objectStore('images'));
+  t.oncomplete=()=>res(out&&out.result);t.onerror=()=>rej(t.error)})};
+async function loadImages(){
+  try{const rows=await tx('readonly',st=>st.getAll());
+    rows.sort((a,b)=>a.added-b.added);
+    IMGS=rows.map(r=>({id:r.id,file:new File([r.blob],r.name||'image.jpg',{type:r.blob.type||'image/jpeg'}),url:URL.createObjectURL(r.blob)}));
+  }catch(e){IMGS=[]}
+  for(const k of Object.keys(S.pick))if(!IMGS.some(i=>i.id===S.pick[k]))delete S.pick[k];
+  fillImages();render();
+}
+/* Large photos are shrunk to 1600px (JPEG) so they share quickly; small ones are kept as they are. */
+async function shrink(f){
+  if(f.size<700e3)return f;
+  try{const bmp=await createImageBitmap(f),k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+    if(k===1&&f.size<2e6)return f;
+    const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    return b?new File([b],f.name.replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'}):f;
+  }catch(e){return f}
+}
+async function addImages(files){
+  let failed=0;
+  for(const f0 of files){if(!f0.type.startsWith('image/'))continue;
+    const f=await shrink(f0),id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    try{await tx('readwrite',st=>st.put({id,name:f.name,blob:f,added:Date.now()}))}catch(e){failed++}
+    IMGS.push({id,file:f,url:URL.createObjectURL(f)});}
+  if(failed)alert('Could not save the image(s) in this browser. They will be gone when the page is closed.');
+  fillImages();render();
+}
+async function removeImage(id){
+  if(!confirm('Remove this image from the tool?'))return;
+  try{await tx('readwrite',st=>st.delete(id))}catch(e){}
+  const i=IMGS.findIndex(x=>x.id===id);if(i>=0){URL.revokeObjectURL(IMGS[i].url);IMGS.splice(i,1)}
+  for(const k of Object.keys(S.pick))if(S.pick[k]===id)delete S.pick[k];
+  fillImages();update();
+}
+function fillImages(){
+  const box=$('imgList');box.innerHTML='';
+  for(const i of IMGS){const d=document.createElement('div');d.className='thumb';
+    d.innerHTML=`<img src="${i.url}" alt=""><button type="button" class="x" aria-label="Remove image">✕</button>`;
+    d.querySelector('.x').onclick=()=>removeImage(i.id);box.appendChild(d);}
+}
 
 /* ---------- dates ---------- */
 const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -363,22 +441,41 @@ function render(){
     if(S.view!=='all'&&t.lang!==S.view)continue;
     const text=t.text(v).split('\n').map(l=>l.trimEnd()).join('\n');
     const d=document.createElement('div');d.className='msg';
-    d.innerHTML=`<h3></h3><p class="small"></p><div class="bubble"></div>
-      <div class="acts"><button type="button" class="primary">Copy</button><a class="btn" target="_blank" rel="noopener">WhatsApp</a></div>`;
+    const img=IMGS.find(i=>i.id===S.pick[t.id]);
+    d.innerHTML=`<h3></h3><p class="small"></p><div class="imgpick"></div><div class="bubble"></div>
+      <div class="acts"><button type="button" class="primary share">Share</button><button type="button" class="copy">Copy text</button><a class="btn" target="_blank" rel="noopener">WhatsApp</a></div>`;
     d.querySelector('h3').textContent=t.title;d.querySelector('.small').textContent=t.when;
-    d.querySelector('.bubble').innerHTML=wa(text);
+    const pk=d.querySelector('.imgpick');
+    if(IMGS.length){
+      const opt=(id,html,label)=>{const b=document.createElement('button');b.type='button';b.className='thumb'+(id?'':' none');
+        b.innerHTML=html;b.setAttribute('aria-label',label);b.setAttribute('aria-pressed',(S.pick[t.id]||'')===id);
+        b.onclick=()=>{if(id)S.pick[t.id]=id;else delete S.pick[t.id];update()};pk.appendChild(b)};
+      opt('','No image','No image');
+      for(const i of IMGS)opt(i.id,`<img src="${i.url}" alt="">`,i.file.name||'Image');
+    }else pk.hidden=true;
+    d.querySelector('.bubble').innerHTML=(img?`<img src="${img.url}" alt="">`:'')+wa(text);
     d.querySelector('a').href='https://wa.me/?text='+encodeURIComponent(text);
-    const b=d.querySelector('button');b.onclick=()=>copy(text,b);
+    const sb=d.querySelector('.share');
+    if(!navigator.share)sb.hidden=true;else sb.onclick=()=>share(text,img,sb);
+    const b=d.querySelector('.copy');b.onclick=()=>copy(text,b);
     box.appendChild(d);
   }
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===S.view));
+}
+async function share(text,img,btn){
+  const data={text};
+  if(img){const f=[img.file];
+    if(navigator.canShare&&!navigator.canShare({files:f})){alert('This browser cannot share images. The text will be shared without the image.')}
+    else data.files=f;}
+  try{await navigator.share(data)}catch(e){
+    if(e.name!=='AbortError'){btn.textContent='Share failed';setTimeout(()=>btn.textContent='Share',1500)}}
 }
 async function copy(text,btn){
   let ok=false;
   try{await navigator.clipboard.writeText(text);ok=true}catch(e){
     const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
     document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(e2){}ta.remove();}
-  btn.textContent=ok?'Copied ✓':'Copy failed';setTimeout(()=>btn.textContent='Copy',1500);
+  btn.textContent=ok?'Copied ✓':'Copy failed';setTimeout(()=>btn.textContent='Copy text',1500);
 }
 
 /* ---------- form ---------- */
@@ -422,7 +519,8 @@ function init(){
   for(const k of Object.keys(SETTINGS))$('s_'+k).addEventListener('input',e=>{S.set[k]=e.target.value;update()});
   $('resetSettings').onclick=()=>{S.set={...SETTINGS};fillSettings();update()};
   document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.view=b.dataset.lang;update()});
-  fillProg();fillEvent();fillSettings();render();
+  $('imgAdd').onchange=e=>{addImages([...e.target.files]);e.target.value=''};
+  fillProg();fillEvent();fillSettings();render();loadImages();
 }
 init();
 </script>
