@@ -72,6 +72,12 @@ input[type=file]{display:none}
   <div class="card">
     <h2>PDF</h2>
     <label>File name <input id="fname" type="text" autocomplete="off"></label>
+    <label>Output
+      <select id="split">
+        <option value="each">One PDF per photo</option>
+        <option value="one">All photos in one PDF</option>
+      </select>
+    </label>
     <div class="row">
       <label>Page size
         <select id="psize">
@@ -130,6 +136,14 @@ $("psize").value = store.get("psize","a4");
 $("qual").value = store.get("qual","std");
 $("psize").onchange = e => store.set("psize", e.target.value);
 $("qual").onchange = e => store.set("qual", e.target.value);
+$("split").value = store.get("split","each");
+$("split").onchange = e => { store.set("split", e.target.value); btnLabels(); };
+function perPhoto(){ return $("split").value === "each" && pages.length > 1; }
+function btnLabels(){
+  const n = perPhoto() ? pages.length : 1, s = n > 1 ? `${n} PDFs` : "PDF";
+  $("dlBtn").textContent = `⬇️ Download ${s}`;
+  $("shareBtn").textContent = `📤 Share ${s}`;
+}
 function defaultName(){
   const d = new Date();
   return `Pranav_${d.toLocaleString("en-US", {month: "long"})}_${d.getFullYear()}`;
@@ -400,6 +414,7 @@ function render1(pg){
 function drawList(){
   const box = $("pages");
   $("dlBtn").disabled = $("shareBtn").disabled = !pages.length;
+  btnLabels();
   if (!pages.length) { box.innerHTML = '<div class="empty">Take a photo of the invoice, or choose one (JPEG, PNG or HEIC). Add more photos for more pages.</div>'; return; }
   box.innerHTML = "";
   pages.forEach((pg, i) => {
@@ -555,7 +570,7 @@ function buildPdf(imgs, pageMode){
   put(x + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
   return new Blob(parts, {type: "application/pdf"});
 }
-async function makePdf(){
+async function pageImgs(){
   const o = OUT[$("qual").value] || OUT.std, imgs = [];
   for (let i = 0; i < pages.length; i++) {
     await busy(`Making PDF… page ${i+1} of ${pages.length}`);
@@ -568,29 +583,41 @@ async function makePdf(){
     }
     imgs.push({w: c.width, h: c.height, data: await canvasJpeg(c, o.q)});
   }
-  const blob = buildPdf(imgs, $("psize").value);
+  return imgs;
+}
+function baseName(){
+  return ($("fname").value || defaultName()).trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\.pdf$/i, "") || defaultName();
+}
+// [{name, blob}]: one combined PDF, or one PDF per photo named <name>_1.pdf, <name>_2.pdf, ...
+async function makePdfs(){
+  const imgs = await pageImgs(), mode = $("psize").value, b = baseName();
+  const out = perPhoto()
+    ? imgs.map((im, i) => ({name: `${b}_${i+1}.pdf`, blob: buildPdf([im], mode)}))
+    : [{name: `${b}.pdf`, blob: buildPdf(imgs, mode)}];
   idle();
-  return blob;
+  return out;
 }
-function pdfName(){
-  let n = ($("fname").value || defaultName()).trim().replace(/[\\/:*?"<>|]+/g, "-");
-  if (!/\.pdf$/i.test(n)) n += ".pdf";
-  return n;
-}
+function kb(files){ return Math.round(files.reduce((t, f) => t + f.blob.size, 0)/1024); }
 $("dlBtn").onclick = async () => {
   try {
-    const blob = await makePdf(), url = URL.createObjectURL(blob), a = document.createElement("a");
-    a.href = url; a.download = pdfName(); document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    status(`Saved ${pdfName()} (${Math.round(blob.size/1024)} KB, ${pages.length} page${pages.length>1?"s":""}).`);
+    const files = await makePdfs();
+    for (let i = 0; i < files.length; i++) {
+      if (i) await new Promise(r => setTimeout(r, 700));   // browsers drop rapid back-to-back downloads
+      const url = URL.createObjectURL(files[i].blob), a = document.createElement("a");
+      a.href = url; a.download = files[i].name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+    status(files.length > 1
+      ? `Saved ${files.length} PDFs: ${files[0].name} … ${files[files.length-1].name} (${kb(files)} KB in all). If the browser asks, allow multiple downloads.`
+      : `Saved ${files[0].name} (${kb(files)} KB, ${pages.length} page${pages.length>1?"s":""}).`);
   } catch (e) { idle(); console.error(e); status("Could not make the PDF: " + e.message); }
 };
 if (navigator.canShare && navigator.canShare({files: [new File(["x"], "t.pdf", {type: "application/pdf"})]})) {
   $("shareBtn").hidden = false;
   $("shareBtn").onclick = async () => {
     try {
-      const blob = await makePdf(), file = new File([blob], pdfName(), {type: "application/pdf"});
-      await navigator.share({files: [file], title: pdfName()});
+      const files = (await makePdfs()).map(f => new File([f.blob], f.name, {type: "application/pdf"}));
+      await navigator.share({files, title: files.length > 1 ? `${baseName()} (${files.length} PDFs)` : files[0].name});
     } catch (e) { idle(); if (e.name !== "AbortError") status("Could not share: " + e.message); }
   };
 }
